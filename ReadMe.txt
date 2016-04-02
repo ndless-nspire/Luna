@@ -27,6 +27,7 @@ http://ndlessly.wordpress.com/
 License
 =======
 
+Luna is covered by the Mozilla Publice License v1.1.
 This product includes software developed by the OpenSSL Project for use in the
 OpenSSL Toolkit (http://www.openssl.org/).
 This product is based on a derived version of MiniZip.
@@ -61,7 +62,6 @@ History
  * FIX: build options for Mac/Linux
  * FIX: skip UTF-8 BOM if any
  * FIX: compatibility with some unicode characters such as chinese ones
-
 
 2012-06-24: v0.3
  * FIX: support all UTF-8 characters
