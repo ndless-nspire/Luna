@@ -1,6 +1,6 @@
 CC ?= gcc
-CFLAGS ?= -W -Wall -DUSE_FILE32API -Wno-unused-parameter
-LDFLAGS ?= -lssl -lz -lcrypto
+CFLAGS ?= -Wall -Wextra -DUSE_FILE32API -Wno-unused-parameter
+LDFLAGS ?= -lz -lcrypto
 VPATH ?= minizip-1.1
 ifeq ($(USER),root)
 	PREFIX ?= /usr/bin
@@ -18,7 +18,7 @@ BIN := luna$(EXEEXT)
 all: $(BIN)
 
 $(BIN): luna.o zip.o ioapi.o
-	gcc -o $@ $^ $(LDFLAGS)
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 install: $(BIN)
 	mkdir -p $(PREFIX)
@@ -26,9 +26,11 @@ install: $(BIN)
 
 dist: clean all
 	mkdir -p dist/src
-	rm -f *.o
+	$(RM) *.o
 	find . -maxdepth 1 ! -name '$(BIN)' -a ! -name dist -a ! -name . -exec cp -r {} dist/src \;
 	cp $(BIN) *.dll *.txt dist
 
 clean:
-	rm -rf *.o $(BIN) dist
+	$(RM) -r *.o $(BIN) dist
+
+.PHONY: all install dist clean
