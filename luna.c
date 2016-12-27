@@ -16,8 +16,8 @@
  * Portions created by the Initial Developer are Copyright (C) 2011-2014
  * the Initial Developer. All Rights Reserved.
  *
- * Contributor(s): 
- *                 
+ * Contributor(s):
+ *
  ****************************************************************************/
 
 #include <openssl/opensslconf.h>
@@ -230,7 +230,7 @@ int has_ext(const char *filepath, const char *ext) {
 	return strlen(filepath) >= 5 && !strcasecmp(ext, filepath + strlen(filepath) - 4);
 }
 
-/* Returns the output buffer, NULL on error. Fills obuf_size. 
+/* Returns the output buffer, NULL on error. Fills obuf_size.
  * Don't compress anything if not Lua/XML */
 void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size) {
 	static const char lua_header[] =
@@ -274,7 +274,7 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size) {
 		header_size = 0;
 		footer_size = 0;
 	}
-	
+
 	FILE *inf;
 	if (!strcmp(inf_path, "-"))
 		inf = stdin;
@@ -316,7 +316,7 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size) {
 	if (!infile_is_xml && !infile_is_lua) {
 		return in_buf;
 	}
-	
+
 	in_buf = escape_unicode(in_buf, header_size, footer_size, in_size, obuf_size);
 	if (!in_buf) return NULL;
 
@@ -351,7 +351,7 @@ int doccrypt(void *inout, long in_size) {
 		printf("doccrypt - key error: %d\n", r);
 		return 1;
 	}
-	
+
 	do {
 		unsigned current_ivec = IVEC_BASE + ivec_incr++;
 		if (ivec_incr == 1024)
@@ -379,7 +379,7 @@ int add_processed_file_to_tns(const char *infile_name, void const *in_buf, long 
 		puts("can't open zip-TNS file for writing");
 		return 1;
 	}
-	
+
 	zi.tmz_date.tm_sec = zi.tmz_date.tm_min = zi.tmz_date.tm_hour =
 		zi.tmz_date.tm_mday = zi.tmz_date.tm_mon = zi.tmz_date.tm_year = 0;
 	zi.dosDate = 0; zi.internal_fa = 0; zi.external_fa = 0;
@@ -471,7 +471,7 @@ int add_infile_to_tns(const char *infile_path, const char *tnsfile_path) {
 
 	/* As expected by zlib */
 	unsigned long def_size = xmlc_buf_size + (xmlc_buf_size * 0.1) + 12;
-	static const char tien_crypted_header[] = 
+	static const char tien_crypted_header[] =
 		"\x0F\xCE\xD8\xD2\x81\x06\x86\x5B\x99\xDD\xA2\x3D\xD9\xE9\x4B\xD4\x31\xBB\x50\xB6"
 		"\x4D\xB3\x29\x24\x70\x60\x49\x38\x1C\x30\xF8\x99\x00\x4B\x92\x64\xE4\x58\xE6\xBC";
 	size_t header_size = sizeof(tien_crypted_header) - 1;
@@ -511,7 +511,7 @@ int main(int argc, char *argv[]) {
 	}
 	char *outfile_path = argv[argc - 1];
 	unlink(outfile_path);
-	
+
 	// Document.xml must be added first to the TNS
 	int has_processed_documentxml = 0;
 	int i;
@@ -522,7 +522,7 @@ int main(int argc, char *argv[]) {
 			if (ret) return ret;
 			has_processed_documentxml = 1;
 		}
-	}	
+	}
 	if  (!has_processed_documentxml) {
 		int ret = add_default_document_to_tns(outfile_path);
 		if (ret) return ret;
@@ -544,7 +544,7 @@ int main(int argc, char *argv[]) {
 		int ret = add_infile_to_tns(argv[i], outfile_path);
 		if (ret) return ret;
 	}
-	
+
 	close_tns(outfile_path);
 	return 0;
 }
