@@ -10,13 +10,15 @@ documents.
 Usage
 =====
 
-Lua program conversion:    `luna [INFILE.lua]  [OUTFILE.tns]`
+Lua program conversion:    `luna INFILE.lua OUTFILE.tns`
 
-Problem conversion:        `luna [Problem.xml] [OUTFILE.tns]`
+Problem conversion:        `luna Problem1.xml OUTFILE.tns`
+
+Multiple files:            `luna Document.xml Problem1.xml [Problem2.xml...] OUTFILE.tns`
 
 If the input is `'-'`, it reads the file from the standard input.
 Make sure to encode your Lua or Problem file in UTF-8 if it contains special
-characters.
+characters. You can also pack arbitrary files like images into the TNS.
 
 Contact
 =======
