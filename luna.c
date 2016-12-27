@@ -20,12 +20,11 @@
  *
  ****************************************************************************/
 
-#include <openssl/opensslconf.h>
-#include OPENSSL_UNISTD
 #include <openssl/des.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <zlib.h>
 #include "minizip-1.1/zip.h"
