@@ -334,8 +334,8 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size) {
 int doccrypt(void *inout, long in_size) {
 	int r;
 	unsigned i;
-	des_key_schedule ks1, ks2, ks3;
-	des_cblock cbc_data;
+	DES_key_schedule ks1, ks2, ks3;
+	DES_cblock cbc_data;
 	/* Compatible with tien_crypted_header below from which they are derived */
 	static unsigned char cbc1_key[8] = {0x16, 0xA7, 0xA7, 0x32, 0x68, 0xA7, 0xBA, 0x73};
 	static unsigned char cbc2_key[8] = {0xD9, 0xA8, 0x86, 0xA4, 0x34, 0x45, 0x94, 0x10};
@@ -345,9 +345,9 @@ int doccrypt(void *inout, long in_size) {
 	/* As stored in tien_crypted_header below */
 	#define IVEC_BASE 0x6fe21307
 
-	if (   (r = des_set_key_checked(&cbc1_key, ks1))
-			|| (r = des_set_key_checked(&cbc2_key, ks2)) != 0
-			|| (r = des_set_key_checked(&cbc3_key, ks3)) != 0) {
+	if (   (r = DES_set_key_checked(&cbc1_key, &ks1))
+			|| (r = DES_set_key_checked(&cbc2_key, &ks2)) != 0
+			|| (r = DES_set_key_checked(&cbc3_key, &ks3)) != 0) {
 		printf("doccrypt - key error: %d\n", r);
 		return 1;
 	}
@@ -360,12 +360,12 @@ int doccrypt(void *inout, long in_size) {
 		ivec[5] = (unsigned char)(current_ivec >> 8);
 		ivec[6] = (unsigned char)(current_ivec >> 16);
 		ivec[7] = (unsigned char)(current_ivec >> 24);
-		memcpy(&cbc_data, ivec, sizeof(des_cblock));
-		des_ecb3_encrypt(&cbc_data, &cbc_data, ks1, ks2, ks3, DES_ENCRYPT);
- 		for (i = 0; i < ((unsigned)in_size >= sizeof(des_cblock) ? sizeof(des_cblock) : (unsigned)in_size); i++) {
+		memcpy(&cbc_data, ivec, sizeof(DES_cblock));
+		DES_ecb3_encrypt(&cbc_data, &cbc_data, &ks1, &ks2, &ks3, DES_ENCRYPT);
+ 		for (i = 0; i < ((unsigned)in_size >= sizeof(DES_cblock) ? sizeof(DES_cblock) : (unsigned)in_size); i++) {
 			*(unsigned char*)inout++ ^= ((unsigned char*)cbc_data)[i];
 		}
-		in_size -= sizeof(des_cblock);
+		in_size -= sizeof(DES_cblock);
 	} while (in_size > 0);
 	return 0;
 }
