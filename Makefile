@@ -28,7 +28,7 @@ dist: clean all
 	mkdir -p dist/src
 	$(RM) *.o
 	find . -maxdepth 1 ! -name '$(BIN)' -a ! -name dist -a ! -name . -exec cp -r {} dist/src \;
-	cp $(BIN) *.dll *.txt dist
+	cp $(BIN) *.md *.txt *.html dist
 
 clean:
 	$(RM) -r *.o $(BIN) dist
