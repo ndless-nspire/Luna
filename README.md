@@ -1,4 +1,4 @@
-Luna v1.0 for TI-Nspire
+Luna v1.0.1 for TI-Nspire
 =======================
 
 Luna is a portable command-line converter of Lua programs to TNS TI-Nspire
@@ -47,6 +47,10 @@ development libraries. Then you can just run `make`.
 
 History
 =======
+
+2016-12-27: v1.0.1
+ * NEW: Show Luna version in usage message
+ * FIX: some minor warnings
 
 2016-12-27: v1.0
  * NEW: Install target in Makefile

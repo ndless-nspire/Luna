@@ -29,6 +29,8 @@
 #include <zlib.h>
 #include "minizip-1.1/zip.h"
 
+#define LUNA_VER "1.0.1"
+
 #ifndef min
  #define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
@@ -507,7 +509,7 @@ add_infile_err:
 
 int main(int argc, char *argv[]) {
 	if (argc < 3) {
-		puts("Usage:\n"
+		puts("Luna v" LUNA_VER " usage:\n"
 				 "  luna [INFILE.lua|-] [OUTFILE.tns]\n"
 				 "  luna [Problem1.xml|Document.xml|ABCD.BMP]* [OUTFILE.tns]\n"
 				 "Converts a Lua script or XML problems/documents/resources to a TNS document.\n"
