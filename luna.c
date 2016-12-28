@@ -35,8 +35,8 @@
 
 const char *gnu_basename(const char *path)
 {
-    char *base = strrchr(path, '/');
-    return base ? base+1 : path;
+	char *base = strrchr(path, '/');
+	return base ? base+1 : path;
 }
 
 /* Reads an UTF-8 character from in to *c. Doesn't read at or after end. Returns a pointer to the next character. */
@@ -170,18 +170,20 @@ void *reformat_xml_doc(char *in_buf, size_t header_size, size_t in_size, size_t 
 		in_ptr++;
 	}
 	if (!xml_start) {
-		puts("input isn't a TI-Nspire problem/document");
+		puts("input is not a TI-Nspire problem/document");
 reformat_xml_quit:
 		free(out_buf);
 		return NULL;
 	}
-	int size_written = 0, read_offset = -1, size_to_read = in_size + header_size - (xml_start - in_buf);
+	int size_written = 0;
+	size_t read_offset = 0;
+	size_t size_to_read = in_size + header_size - (xml_start - in_buf);
 	unsigned tagid_stack[100];
 	unsigned tagid_head_index = 0;
-	int last_tagid = -1;
+	unsigned last_tagid = 0;
 	char *out_ptr = out_buf + header_size;
 	// very weak XML parsing: all < must be escaped
-	while(++read_offset <= size_to_read - 1) {
+	while(read_offset <= size_to_read - 1) {
 		if (xml_start[read_offset] == '<') {
 			if (read_offset + 1 >= size_to_read) {
 invalid_problem:
@@ -207,12 +209,13 @@ invalid_problem:
 					puts("input problem/document XML too deep");
 					goto reformat_xml_quit;
 				}
-				tagid_stack[tagid_head_index++] = ++last_tagid;
+				tagid_stack[tagid_head_index++] = last_tagid++;
 				out_ptr[size_written++] = xml_start[read_offset];
 			}
 		} else {
 			out_ptr[size_written++] = xml_start[read_offset];
 		}
+		read_offset++;
 	}
 	*obuf_size = header_size + size_written;
 	out_buf = realloc(out_buf, *obuf_size);
@@ -288,6 +291,7 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size) {
 	char *in_buf = malloc(*obuf_size);
 	if (!in_buf) {
 		puts("can't realloc in_buf");
+		fclose(inf);
 		return NULL;
 	}
 	memcpy(in_buf, header, header_size);
@@ -298,6 +302,7 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size) {
 			*obuf_size -= FREAD_BLOCK_SIZE - read_size;
 			if (!(in_buf = realloc(in_buf, *obuf_size))) {
 				puts("can't realloc in_buf");
+				free(in_buf);
 				return NULL;
 			}
 			break;
@@ -305,6 +310,7 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size) {
 		*obuf_size += FREAD_BLOCK_SIZE;
 		if (!(in_buf = realloc(in_buf, *obuf_size))) {
 			puts("can't realloc in_buf");
+			free(in_buf);
 			return NULL;
 		}
 		in_offset += read_size;
@@ -379,8 +385,8 @@ int add_processed_file_to_tns(const char *infile_name, void const *in_buf, long 
 		return 1;
 	}
 
-	zi.tmz_date.tm_sec = zi.tmz_date.tm_min = zi.tmz_date.tm_hour =
-		zi.tmz_date.tm_mday = zi.tmz_date.tm_mon = zi.tmz_date.tm_year = 0;
+	zi.tmz_date.tm_sec = zi.tmz_date.tm_min = zi.tmz_date.tm_hour = 0;
+	zi.tmz_date.tm_mday = zi.tmz_date.tm_mon = zi.tmz_date.tm_year = 0;
 	zi.dosDate = 0; zi.internal_fa = 0; zi.external_fa = 0;
 	if (has_ext(infile_name, ".lua") || !strcmp("-", infile_name))
 		infile_name = "Problem1.xml";
@@ -417,7 +423,7 @@ void close_tns(const char *outfile_path) {
 }
 
 // returns the deflated size
-long deflate_compressed_xml(void *def_buf, unsigned long def_size, void *xmlc_buf, unsigned long xmlc_buf_size) {
+long deflate_compressed_xml(void *def_buf, size_t def_size, void *xmlc_buf, size_t xmlc_buf_size) {
 	z_stream zstream;
 	zstream.next_in = (Bytef*)xmlc_buf;
 	zstream.next_out = (Bytef*)def_buf;
@@ -427,7 +433,7 @@ long deflate_compressed_xml(void *def_buf, unsigned long def_size, void *xmlc_bu
 	zstream.zfree  = Z_NULL;
 	/* -windowBits=-15: no zlib header */
 	if (deflateInit2(&zstream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY)) {
-		printf("can't deflateInit2");
+		puts("can't deflateInit2");
 		exit(1);
 	}
 	if (deflate(&zstream, Z_FINISH) != Z_STREAM_END) {
@@ -469,7 +475,7 @@ int add_infile_to_tns(const char *infile_path, const char *tnsfile_path) {
 		return 1;
 
 	/* As expected by zlib */
-	unsigned long def_size = xmlc_buf_size + (xmlc_buf_size * 0.1) + 12;
+	size_t def_size = (size_t) (xmlc_buf_size + (xmlc_buf_size * 0.1) + 12);
 	static const char tien_crypted_header[] =
 		"\x0F\xCE\xD8\xD2\x81\x06\x86\x5B\x99\xDD\xA2\x3D\xD9\xE9\x4B\xD4\x31\xBB\x50\xB6"
 		"\x4D\xB3\x29\x24\x70\x60\x49\x38\x1C\x30\xF8\x99\x00\x4B\x92\x64\xE4\x58\xE6\xBC";
@@ -477,6 +483,8 @@ int add_infile_to_tns(const char *infile_path, const char *tnsfile_path) {
 	void *header_and_deflated_buf = malloc(def_size + header_size);
 	if (!header_and_deflated_buf) {
 		puts("can't malloc header_and_deflated_buf");
+add_infile_err:
+		free(header_and_deflated_buf);
 		return 1;
 	}
 	if (!has_ext(infile_path, ".bmp")) { // bmp are not encrypted
@@ -484,14 +492,14 @@ int add_infile_to_tns(const char *infile_path, const char *tnsfile_path) {
 		long deflated_size = deflate_compressed_xml(def_buf, def_size, xmlc_buf, xmlc_buf_size);
 		free(xmlc_buf);
 		if (doccrypt(def_buf, deflated_size))
-			return 1;
+			goto add_infile_err;
 		memcpy(header_and_deflated_buf, tien_crypted_header, header_size);
 		if (add_processed_file_to_tns(gnu_basename(infile_path), header_and_deflated_buf, header_size + deflated_size, tnsfile_path))
-			return 1;
+			goto add_infile_err;
 	}
 	else { // don't crypt, don't deflate: will be deflated by minizip
 		if (add_processed_file_to_tns(gnu_basename(infile_path), xmlc_buf, xmlc_buf_size, tnsfile_path))
-			return 1;
+			goto add_infile_err;
 	}
 	free(header_and_deflated_buf);
 	return 0;
@@ -500,7 +508,7 @@ int add_infile_to_tns(const char *infile_path, const char *tnsfile_path) {
 int main(int argc, char *argv[]) {
 	if (argc < 3) {
 		puts("Usage:\n"
-		         "  luna [INFILE.lua|-] [OUTFILE.tns]\n"
+				 "  luna [INFILE.lua|-] [OUTFILE.tns]\n"
 				 "  luna [Problem1.xml|Document.xml|ABCD.BMP]* [OUTFILE.tns]\n"
 				 "Converts a Lua script or XML problems/documents/resources to a TNS document.\n"
 				 "If the input file '-', reads it as Lua from the standard input.\n"
@@ -514,7 +522,7 @@ int main(int argc, char *argv[]) {
 	// Document.xml must be added first to the TNS
 	int has_processed_documentxml = 0;
 	int i;
-	for (i = 1; i <= argc - 2; i ++) { // infiles: the args except the last one
+	for (i = 1; i <= argc - 2; i++) { // infiles: the args except the last one
 		if (!strcmp("Document.xml", gnu_basename(argv[i]))) {
 			printf("processing '%s'...\n", argv[i]);
 			int ret = add_infile_to_tns(argv[i], outfile_path);
@@ -522,14 +530,14 @@ int main(int argc, char *argv[]) {
 			has_processed_documentxml = 1;
 		}
 	}
-	if  (!has_processed_documentxml) {
+	if (!has_processed_documentxml) {
 		int ret = add_default_document_to_tns(outfile_path);
 		if (ret) return ret;
 	}
 
 	// Then add all the other files
 	int is_converting_lua = 0;
-	for (i = 1; i <= argc - 2; i ++) { // infiles: the args except the last one
+	for (i = 1; i <= argc - 2; i++) { // infiles: the args except the last one
 		if (!strcmp("Document.xml", gnu_basename(argv[i])))
 			continue;
 		printf("processing '%s'...\n", argv[i]);
