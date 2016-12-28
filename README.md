@@ -1,52 +1,39 @@
-Luna v1.0 for TI-Nspire
-=======================
+Luna 1.0.1
+==========
 
-Luna is a portable command-line converter of Lua programs to TNS TI-Nspire
-documents, compatible with OS 3.0.2 and later.
+Luna is a portable command-line converter of Lua programs to TNS TI-Nspire documents, compatible with OS 3.0.2 and later.
 
-It can also be used to convert any TI-Nspire problems in XML format to TNS
-documents.
+It can also be used to convert any TI-Nspire problems in XML format to TNS documents.
 
-Usage
-=====
+## Usage
 
-Lua program conversion:    `luna INFILE.lua OUTFILE.tns`
+* Lua program conversion:    `luna INFILE.lua OUTFILE.tns`
+* Problem conversion:        `luna Problem1.xml OUTFILE.tns`
+* Multiple files:            `luna Document.xml Problem1.xml [Problem2.xml...] OUTFILE.tns`
 
-Problem conversion:        `luna Problem1.xml OUTFILE.tns`
+If the input is `-`, it reads the file from the standard input.  
+Make sure to encode your Lua or Problem file in UTF-8 if it contains special characters. You can also pack arbitrary files like images into the TNS.
 
-Multiple files:            `luna Document.xml Problem1.xml [Problem2.xml...] OUTFILE.tns`
+## Bugs, feedback...
 
-If the input is `'-'`, it reads the file from the standard input.
-Make sure to encode your Lua or Problem file in UTF-8 if it contains special
-characters. You can also pack arbitrary files like images into the TNS.
+Please use the GitHub [issue tracker](https://github.com/ndless-nspire/Luna/issues).
 
-Contact
-=======
-
-Oliver Armand aka ExtendeD - olivier.calc@gmail.com
-
-https://ndlessly.wordpress.com/
-
-License
-=======
+## License
 
 Luna is covered by the Mozilla Public License v1.1.
+It is based on a derived version of MiniZip. See minizip-1.1/MiniZip64_info.txt for more information.
 
-This product includes software developed by the OpenSSL Project for use in the
-OpenSSL Toolkit (https://www.openssl.org/).
+## Building it yourself
 
-This product is based on a derived version of MiniZip.
-See OpenSSL-License.txt and minizip-1.1/MiniZip64\_info.txt for more
-information.
+You need the OpenSSL (libssl-dev/libopenssl-devel) and zlib (zlib1g-dev/zlib-devel)
+development libraries. On macOS, you can use [brew](http://brew.sh/): `brew install openssl zlib`  
+Then you can just run `make`.
 
-Building it yourself
-====================
+## History
 
-You need the OpenSSL (libssl-dev/openssl-devel) and zlib (zlib1g-dev/zlib-devel)
-development libraries. Then you can just run `make`.
-
-History
-=======
+2016-12-27: v1.0.1
+ * NEW: Show Luna version in usage message
+ * FIX: some minor warnings
 
 2016-12-27: v1.0
  * NEW: Install target in Makefile

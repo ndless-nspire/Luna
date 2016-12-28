@@ -1,14 +1,14 @@
-CC ?= gcc
-CFLAGS ?= -Wall -Wextra -DUSE_FILE32API -Wno-unused-parameter
-LDFLAGS ?= -lz -lcrypto
-VPATH ?= minizip-1.1
-ifeq ($(USER),root)
-	PREFIX ?= /usr/bin
-else
-	PREFIX ?= ~/bin
-endif
+CC     ?= gcc
+CFLAGS  = -O2 -flto -Wall -Wextra -DNOCRYPT -DUSE_FILE32API -Wno-unused-parameter
+LDFLAGS = -flto -lz -lcrypto
+VPATH   = minizip-1.1
 
-OS ?= `uname -s`
+PREFIX = /usr/local/bin
+
+OS := $(shell uname -s)
+ifeq ($(OS),Darwin)
+  CFLAGS += -I/usr/local/opt/openssl/include
+endif
 ifeq ($(OS),Windows_NT)
   EXEEXT = .exe
 endif
