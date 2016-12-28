@@ -1,5 +1,5 @@
 CC     ?= gcc
-CFLAGS  = -O2 -flto -Wall -Wextra -DUSE_FILE32API -Wno-unused-parameter
+CFLAGS  = -O2 -flto -Wall -Wextra -DNOCRYPT -DUSE_FILE32API -Wno-unused-parameter
 LDFLAGS = -flto -lz -lcrypto
 VPATH   = minizip-1.1
 
