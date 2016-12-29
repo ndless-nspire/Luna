@@ -24,7 +24,7 @@ install: $(BIN)
 dist: clean all
 	mkdir -p dist/src
 	find . -maxdepth 1 ! -name '$(BIN)' -a ! -name dist -a ! -name . -exec cp -r {} dist/src \;
-	cp $(BIN) *.md *.txt *.html dist
+	cp $(BIN) *.md LICENSE dist
 
 clean:
 	$(RM) -r *.o $(BIN) dist
