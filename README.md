@@ -1,5 +1,5 @@
-Luna 1.0.1
-==========
+Luna 2.0
+========
 
 Luna is a portable command-line converter of Lua programs to TNS TI-Nspire documents, compatible with OS 3.0.2 and later.
 
@@ -20,20 +20,23 @@ Please use the GitHub [issue tracker](https://github.com/ndless-nspire/Luna/issu
 
 ## License
 
-Luna is covered by the Mozilla Public License v1.1.
-It is based on a derived version of MiniZip. See minizip-1.1/MiniZip64_info.txt for more information.
+Luna is licensed under the Mozilla Public License v1.1.  
+Luna is based on a derived version of MiniZip. See minizip-1.1/MiniZip64_info.txt for more information.  
+Luna includes cryptographic software written by Eric Young (eay@cryptsoft.com), see the DES.* files for more information.
 
 ## Building it yourself
 
-You need the OpenSSL (libssl-dev/libopenssl-devel) and zlib (zlib1g-dev/zlib-devel)
-development libraries. On macOS, you can use [brew](http://brew.sh/): `brew install openssl zlib`  
+You need the zlib (zlib1g-dev/zlib-devel) development library. On macOS, you can use [brew](http://brew.sh/): `brew install zlib`  
 Then you can just run `make`.
 
 ## History
 
+2016-12-27: v2.0
+ * NEW: No OpenSSL library dependency anymore, just use the relevant DES code.
+ 
 2016-12-27: v1.0.1
  * NEW: Show Luna version in usage message
- * FIX: some minor warnings
+ * FIX: Some minor warnings
 
 2016-12-27: v1.0
  * NEW: Install target in Makefile
