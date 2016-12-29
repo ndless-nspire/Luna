@@ -20,16 +20,16 @@
  *
  ****************************************************************************/
 
-#include <openssl/des.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
+#include "DES.h"
 #include <zlib.h>
 #include "minizip-1.1/zip.h"
 
-#define LUNA_VER "1.0.1"
+#define LUNA_VER "2.0"
 
 #ifndef min
  #define min(a,b) (((a) < (b)) ? (a) : (b))
@@ -338,8 +338,7 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size) {
 	}
 }
 
-int doccrypt(void *inout, long in_size) {
-	int r;
+int doccrypt(uint8_t *inout, long in_size) {
 	unsigned i;
 	DES_key_schedule ks1, ks2, ks3;
 	DES_cblock cbc_data;
@@ -352,12 +351,9 @@ int doccrypt(void *inout, long in_size) {
 	/* As stored in tien_crypted_header below */
 	#define IVEC_BASE 0x6fe21307
 
-	if (   (r = DES_set_key_checked(&cbc1_key, &ks1))
-			|| (r = DES_set_key_checked(&cbc2_key, &ks2)) != 0
-			|| (r = DES_set_key_checked(&cbc3_key, &ks3)) != 0) {
-		printf("doccrypt - key error: %d\n", r);
-		return 1;
-	}
+	DES_set_key((DES_cblock*)&cbc1_key, &ks1);
+	DES_set_key((DES_cblock*)&cbc2_key, &ks2);
+	DES_set_key((DES_cblock*)&cbc3_key, &ks3);
 
 	do {
 		unsigned current_ivec = IVEC_BASE + ivec_incr++;
@@ -370,7 +366,7 @@ int doccrypt(void *inout, long in_size) {
 		memcpy(&cbc_data, ivec, sizeof(DES_cblock));
 		DES_ecb3_encrypt(&cbc_data, &cbc_data, &ks1, &ks2, &ks3, DES_ENCRYPT);
  		for (i = 0; i < ((unsigned)in_size >= sizeof(DES_cblock) ? sizeof(DES_cblock) : (unsigned)in_size); i++) {
-			*(unsigned char*)inout++ ^= ((unsigned char*)cbc_data)[i];
+			*inout++ ^= cbc_data.bytes[i];
 		}
 		in_size -= sizeof(DES_cblock);
 	} while (in_size > 0);
@@ -482,7 +478,7 @@ int add_infile_to_tns(const char *infile_path, const char *tnsfile_path) {
 		"\x0F\xCE\xD8\xD2\x81\x06\x86\x5B\x99\xDD\xA2\x3D\xD9\xE9\x4B\xD4\x31\xBB\x50\xB6"
 		"\x4D\xB3\x29\x24\x70\x60\x49\x38\x1C\x30\xF8\x99\x00\x4B\x92\x64\xE4\x58\xE6\xBC";
 	size_t header_size = sizeof(tien_crypted_header) - 1;
-	void *header_and_deflated_buf = malloc(def_size + header_size);
+	uint8_t *header_and_deflated_buf = malloc(def_size + header_size);
 	if (!header_and_deflated_buf) {
 		puts("can't malloc header_and_deflated_buf");
 add_infile_err:
@@ -490,7 +486,7 @@ add_infile_err:
 		return 1;
 	}
 	if (!has_ext(infile_path, ".bmp")) { // bmp are not encrypted
-		void *def_buf = header_and_deflated_buf + header_size;
+		uint8_t *def_buf = header_and_deflated_buf + header_size;
 		long deflated_size = deflate_compressed_xml(def_buf, def_size, xmlc_buf, xmlc_buf_size);
 		free(xmlc_buf);
 		if (doccrypt(def_buf, deflated_size))
