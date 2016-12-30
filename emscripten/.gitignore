@@ -1,0 +1,6 @@
+*.bc
+*.wasm
+*.wast
+*.asm.js
+*.js.mem
+luna.js

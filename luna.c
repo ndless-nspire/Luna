@@ -517,6 +517,8 @@ int main(int argc, char *argv[]) {
 	char *outfile_path = argv[argc - 1];
 	unlink(outfile_path);
 
+	zipF = 0; // Only useful for emscripten (possible multiple main() calls)
+
 	// Document.xml must be added first to the TNS
 	int has_processed_documentxml = 0;
 	int i;

@@ -3,7 +3,9 @@ CFLAGS  = -O2 -flto -Wall -Wextra -DNOCRYPT -DUSE_FILE32API -Wno-unused-paramete
 LDFLAGS = -flto -lz
 VPATH   = minizip-1.1
 
-PREFIX = /usr/local/bin
+PREFIX  = /usr/local/bin
+
+OBJECTS = luna.o zip.o ioapi.o DES.o
 
 OS := $(shell uname -s)
 ifeq ($(OS),Windows_NT)
@@ -14,7 +16,7 @@ BIN := luna$(EXEEXT)
 
 all: $(BIN)
 
-$(BIN): luna.o zip.o ioapi.o DES.o
+$(BIN): $(OBJECTS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 install: $(BIN)
@@ -27,6 +29,6 @@ dist: clean all
 	cp $(BIN) *.md LICENSE dist
 
 clean:
-	$(RM) -r *.o $(BIN) dist
+	$(RM) -r $(OBJECTS) $(BIN) dist
 
 .PHONY: all install dist clean
