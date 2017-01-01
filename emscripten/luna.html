@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en-us">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>luna-web</title>
+  <script src="FileSaver.js" type="text/javascript"></script>
+</head>
+
+<body>
+
+<div>
+    Create a .tns file from a .lua script (or Problem1.xml): <input type="file" accept=".lua, .xml" onChange="fileLoad(event)"/><br>
+</div>
+
+<script type='text/javascript'>
+    Module = { };
+    var loadlunajs = function()
+    {
+        var script = document.createElement('script');
+        script.src = "luna.js";
+        document.body.appendChild(script);
+    };
+
+    if (typeof WebAssembly !== "undefined")
+    {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', 'luna.wasm', true);
+        xhr.responseType = 'arraybuffer';
+        xhr.onload = function () { Module.wasmBinary = xhr.response; };
+        xhr.onloadend = loadlunajs;
+        xhr.send(null);
+    } else {
+        loadlunajs();
+    }
+</script>
+
+</body>
+</html>

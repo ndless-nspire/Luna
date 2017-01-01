@@ -22,7 +22,8 @@ Please use the GitHub [issue tracker](https://github.com/ndless-nspire/Luna/issu
 
 Luna is licensed under the Mozilla Public License v1.1.  
 Luna is based on a derived version of MiniZip. See minizip-1.1/MiniZip64_info.txt for more information.  
-Luna includes cryptographic software written by Eric Young (eay@cryptsoft.com), see the DES.* files for more information.
+Luna includes cryptographic software written by Eric Young (eay@cryptsoft.com), see the DES.* files for more information.  
+The JS version uses FileSaver.js, MIT-licensed.
 
 ## Building it yourself
 
@@ -31,7 +32,7 @@ Then you can just run `make`.
 
 ## History
 
-2016-12-27: v2.0
+2016-12-28: v2.0
  * NEW: No OpenSSL library dependency anymore, just use the relevant DES code.
  
 2016-12-27: v1.0.1
