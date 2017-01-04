@@ -207,7 +207,7 @@ invalid_problem:
 				}
 			}
 			else { // opening tag
-				if (tagid_head_index >= sizeof(tagid_stack)) {
+				if (tagid_head_index >= sizeof(tagid_stack) / sizeof(*tagid_stack)) {
 					puts("input problem/document XML too deep");
 					goto reformat_xml_quit;
 				}
