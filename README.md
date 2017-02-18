@@ -34,6 +34,7 @@ Then you can just run `make`.
 
 2016-12-28: v2.0
  * NEW: No OpenSSL library dependency anymore, just use the relevant DES code.
+ * FIX: Fix crash when parsing deeply nested XML documents
  
 2016-12-27: v1.0.1
  * NEW: Show Luna version in usage message
