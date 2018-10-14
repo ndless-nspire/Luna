@@ -29,7 +29,7 @@
 #include <zlib.h>
 #include "minizip-1.1/zip.h"
 
-#define LUNA_VER "2.0"
+#define LUNA_VER "2.1"
 
 #ifndef min
  #define min(a,b) (((a) < (b)) ? (a) : (b))
@@ -432,7 +432,7 @@ int doccrypt(uint8_t *inout, long in_size) {
 static zipFile zipF = 0;
 
 // stateful, keep the zipFile opened
-int add_processed_file_to_tns(const char *infile_name, void const *in_buf, long in_size, const char *outfile_path) {
+int add_processed_file_to_tns(const char *infile_name, void const *in_buf, long in_size, const char *outfile_path, unsigned tiversion) {
 	zip_fileinfo zi;
 	if (!zipF && !(zipF = zipOpen(outfile_path, 0))) {
 		puts("can't open zip-TNS file for writing");
@@ -450,7 +450,7 @@ int add_processed_file_to_tns(const char *infile_name, void const *in_buf, long 
 		method = Z_DEFLATED; // just deflated
 		level = Z_DEFAULT_COMPRESSION;
 	}
-	if (zipOpenNewFileInZip2(zipF, infile_name, &zi, NULL, 0, NULL, 0, NULL, method, level, 0) != ZIP_OK) {
+	if (zipOpenNewFileInZip2(zipF, infile_name, &zi, NULL, 0, NULL, 0, NULL, method, level, 0, tiversion) != ZIP_OK) {
 		puts("can't open file in zip-TNS file for writing");
 close_quit:
 		zipClose(zipF, NULL);
@@ -501,7 +501,7 @@ long deflate_compressed_xml(void *def_buf, size_t def_size, void *xmlc_buf, size
 	return zstream.total_out;
 }
 
-int add_default_document_to_tns(const char *tnsfile_path) {
+int add_default_document_to_tns(const char *tnsfile_path, unsigned tiversion) {
 	static const char default_processed_document_xml[] =
 		"\x0F\xCE\xD8\xD2\x81\x06\x86\x5B\x4A\x4A\xC5\xCE\xA9\x16\xF2\xD5\x1D\xA8\x2F\x6E"
 		"\x00\x22\xF2\xF0\xC1\xA6\x06\x77\x4D\x7E\xA6\xC0\x3A\xF0\x5C\x74\xBA\xAA\x44\x60"
@@ -519,10 +519,10 @@ int add_default_document_to_tns(const char *tnsfile_path) {
 		"\x2D\xFA\x69\x9F\x11\xD2\x20\x12\xE0\x79\x14\x04\x4E\x62\x8F\x0A\x2A\x18\x72\x5A"
 		"\x8B\x80\xB3\x3C\x9B\xD5\x67\x59\x4B\x51\x4D\xE0\xC3\x38\x28\xC3\xDC\xCD\x39\x22"
 		"\x12\x8C\x40\x55";
-	return add_processed_file_to_tns("Document.xml", default_processed_document_xml, sizeof(default_processed_document_xml) - 1, tnsfile_path);
+	return add_processed_file_to_tns("Document.xml", default_processed_document_xml, sizeof(default_processed_document_xml) - 1, tnsfile_path, tiversion);
 }
 
-int add_infile_to_tns(const char *infile_path, const char *tnsfile_path) {
+int add_infile_to_tns(const char *infile_path, const char *tnsfile_path, unsigned tiversion) {
 	size_t xmlc_buf_size;
 	void *xmlc_buf = read_file_and_xml_compress(infile_path, &xmlc_buf_size);
 	if (!xmlc_buf)
@@ -548,11 +548,11 @@ add_infile_err:
 		if (doccrypt(def_buf, deflated_size))
 			goto add_infile_err;
 		memcpy(header_and_deflated_buf, tien_crypted_header, header_size);
-		if (add_processed_file_to_tns(gnu_basename(infile_path), header_and_deflated_buf, header_size + deflated_size, tnsfile_path))
+		if (add_processed_file_to_tns(gnu_basename(infile_path), header_and_deflated_buf, header_size + deflated_size, tnsfile_path, tiversion))
 			goto add_infile_err;
 	}
 	else { // don't crypt, don't deflate: will be deflated by minizip
-		if (add_processed_file_to_tns(gnu_basename(infile_path), xmlc_buf, xmlc_buf_size, tnsfile_path))
+		if (add_processed_file_to_tns(gnu_basename(infile_path), xmlc_buf, xmlc_buf_size, tnsfile_path, tiversion))
 			goto add_infile_err;
 	}
 	free(header_and_deflated_buf);
@@ -570,6 +570,14 @@ int main(int argc, char *argv[]) {
 		);
 		return 0;
 	}
+	unsigned tiversion = 0x0500; // default to document version 5
+	for (int i = 1; i <= argc - 2; i++) { // infiles: the args except the last one
+		if (has_ext(argv[i], ".bmp")) {
+			tiversion = 0x0700; // bitmap files require the document type to be bumped up to 7
+			break;
+		}
+	}
+
 	char *outfile_path = argv[argc - 1];
 	unlink(outfile_path);
 
@@ -577,23 +585,22 @@ int main(int argc, char *argv[]) {
 
 	// Document.xml must be added first to the TNS
 	int has_processed_documentxml = 0;
-	int i;
-	for (i = 1; i <= argc - 2; i++) { // infiles: the args except the last one
+	for (int i = 1; i <= argc - 2; i++) { // infiles: the args except the last one
 		if (!strcmp("Document.xml", gnu_basename(argv[i]))) {
 			printf("processing '%s'...\n", argv[i]);
-			int ret = add_infile_to_tns(argv[i], outfile_path);
+			int ret = add_infile_to_tns(argv[i], outfile_path, tiversion);
 			if (ret) return ret;
 			has_processed_documentxml = 1;
 		}
 	}
 	if (!has_processed_documentxml) {
-		int ret = add_default_document_to_tns(outfile_path);
+		int ret = add_default_document_to_tns(outfile_path, tiversion);
 		if (ret) return ret;
 	}
 
 	// Then add all the other files
 	int is_converting_lua = 0;
-	for (i = 1; i <= argc - 2; i++) { // infiles: the args except the last one
+	for (int i = 1; i <= argc - 2; i++) { // infiles: the args except the last one
 		if (!strcmp("Document.xml", gnu_basename(argv[i])))
 			continue;
 		printf("processing '%s'...\n", argv[i]);
@@ -604,7 +611,7 @@ int main(int argc, char *argv[]) {
 			}
 			is_converting_lua = 1;
 		}
-		int ret = add_infile_to_tns(argv[i], outfile_path);
+		int ret = add_infile_to_tns(argv[i], outfile_path, tiversion);
 		if (ret) return ret;
 	}
 
