@@ -32,6 +32,9 @@ Then you can just run `make`.
 
 ## History
 
+2018-10-03: v2.1
+ * FIX: luna now defaults to an older file header version unless the input file is a bitmap
+
 2016-12-28: v2.0
  * NEW: No OpenSSL library dependency anymore, just use the relevant DES code.
  * FIX: Fix crash when parsing deeply nested XML documents
