@@ -1,0 +1,16 @@
+language: c
+
+sudo: false
+os: linux
+dist: trusty
+
+script:
+  - make -j4
+
+notifications:
+  irc:
+    channels:
+      - "irc.choopa.net#ndless-dev"
+    on_success: change
+    on_failure: always
+    skip_join: true
