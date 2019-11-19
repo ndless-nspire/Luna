@@ -197,11 +197,26 @@ invalid_problem:
 					goto invalid_problem;
 				}
 				read_offset++;
-				out_ptr[size_written++] = 0x0E;
-				out_ptr[size_written++] = tagid_stack[--tagid_head_index];
-				// skip the closing tag
-				while(++read_offset <= size_to_read - 1 && xml_start[read_offset] != '>')
-					;
+				unsigned index = tagid_stack[--tagid_head_index];
+				if(index < 256) {
+					out_ptr[size_written++] = 0x0E;
+					out_ptr[size_written++] = index;
+					// skip the closing tag
+					while(++read_offset <= size_to_read - 1 && xml_start[read_offset] != '>')
+						;
+				}
+				else {
+					// Too big for the tag store, copy in full
+					const char *tag_first = &xml_start[read_offset - 1];
+					const char *tag_last = memchr(&xml_start[read_offset], '>', size_to_read - read_offset);
+					if(!tag_last)
+						goto invalid_problem;
+
+					memcpy(out_ptr + size_written, tag_first, tag_last - tag_first + 1);
+					size_written += tag_last - tag_first + 1;
+					read_offset = tag_last - xml_start + 1;
+					continue;
+				}
 				if (read_offset > size_to_read - 1) {
 					goto invalid_problem;
 				}
