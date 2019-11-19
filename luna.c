@@ -206,6 +206,47 @@ invalid_problem:
 					goto invalid_problem;
 				}
 			}
+			else if (xml_start[read_offset + 1] == '!') { // special
+				if (read_offset + 2 >= size_to_read)
+					goto invalid_problem;
+
+				read_offset += 2;
+
+				if (xml_start[read_offset] == '-') {
+					puts("XML comments not supported");
+					goto reformat_xml_quit;
+				}
+
+				if (read_offset + sizeof("[CDATA[]]>") >= size_to_read)
+					goto invalid_problem;
+
+				if (strncmp(&xml_start[read_offset], "[CDATA[", strlen("[CDATA")))
+					goto invalid_problem;
+
+				const char *cdata_first = &xml_start[read_offset - 2];
+				read_offset += strlen("[CDATA[");
+
+				const char *cdata_last = NULL;
+				for(;;) {
+					const char *maybe_last = memchr(xml_start + read_offset, '>', size_to_read - read_offset);
+					if(!maybe_last)
+						break;
+
+					read_offset = maybe_last - xml_start + 1;
+
+					if(!strncmp("]]>", maybe_last - 2, strlen("]]>")))
+						cdata_last = maybe_last;
+				}
+
+				if(!cdata_last)
+					goto invalid_problem;
+
+				// Copy everything including the start and end tags
+				memcpy(out_ptr + size_written, cdata_first, cdata_last - cdata_first + 1);
+				size_written += cdata_last - cdata_first + 1;
+				read_offset = cdata_last - xml_start + 1;
+				continue;
+			}
 			else { // opening tag
 				if (tagid_head_index >= sizeof(tagid_stack) / sizeof(*tagid_stack)) {
 					puts("input problem/document XML too deep");
