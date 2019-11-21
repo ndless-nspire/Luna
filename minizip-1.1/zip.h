@@ -194,7 +194,9 @@ extern int ZEXPORT zipOpenNewFileInZip2 OF((zipFile file,
                                             const char* comment,
                                             int method,
                                             int level,
-                                            int raw));
+                                            int raw,
+                                            int tiapimajor,
+                                            int tiapiminor));
 
 
 extern int ZEXPORT zipOpenNewFileInZip2_64 OF((zipFile file,
@@ -295,7 +297,9 @@ extern int ZEXPORT zipOpenNewFileInZip4_64 OF((zipFile file,
                                             uLong crcForCrypting,
                                             uLong versionMadeBy,
                                             uLong flagBase,
-                                            int zip64
+                                            int zip64,
+                                            int tiapimajor,
+                                            int tiapiminor
                                             ));
 /*
   Same than zipOpenNewFileInZip4, except
