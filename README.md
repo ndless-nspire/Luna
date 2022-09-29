@@ -1,4 +1,4 @@
-Luna 2.0
+Luna 2.1
 ========
 
 Luna is a portable command-line converter of Lua programs to TNS TI-Nspire documents, compatible with OS 3.0.2 and later.
@@ -32,8 +32,11 @@ Then you can just run `make`.
 
 ## History
 
-2018-10-03: v2.1
+2022-09-29: v2.1
+ * NEW: Support for CDATA
  * FIX: luna now defaults to an older file header version unless one of the input files is a .bmp
+ * FIX: Fix invalid generation of XML documents with more than 256 tags
+ * FIX: Fix crash when using with XML documents with many tags
 
 2016-12-28: v2.0
  * NEW: No OpenSSL library dependency anymore, just use the relevant DES code.
