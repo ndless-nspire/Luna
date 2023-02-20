@@ -292,7 +292,7 @@ int has_ext(const char *filepath, const char *ext) {
 
 /* Returns the output buffer, NULL on error. Fills obuf_size.
  * Don't compress anything if not Lua/XML */
-void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size) {
+void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size, const char **filename) {
 	static const char lua_header[] =
 		"\x54\x49\x58\x43\x30\x31\x30\x30\x2D\x31\x2E\x30\x3F\x3E\x3C\x70\x72"
 		"\x6F\x62\x20\x78\x6D\x6C\x6E\x73\x3D\x22\x75\x72\x6E\x3A\x54\x49\x2E"
@@ -316,6 +316,10 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size) {
 
 	int infile_is_xml = has_ext(inf_path, ".xml");
 	int infile_is_lua = has_ext(inf_path, ".lua") || !strcmp("-", inf_path);
+
+	*filename = gnu_basename(inf_path);
+	if (infile_is_lua)
+		*filename = "Problem1.xml";
 
 	const char *header;
 	size_t header_size;
@@ -442,11 +446,9 @@ int add_processed_file_to_tns(const char *infile_name, void const *in_buf, long 
 	zi.tmz_date.tm_sec = zi.tmz_date.tm_min = zi.tmz_date.tm_hour = 0;
 	zi.tmz_date.tm_mday = zi.tmz_date.tm_mon = zi.tmz_date.tm_year = 0;
 	zi.dosDate = 0; zi.internal_fa = 0; zi.external_fa = 0;
-	if (has_ext(infile_name, ".lua") || !strcmp("-", infile_name))
-		infile_name = "Problem1.xml";
 	int method = 0xD; // TI encrypted
 	int level = 0;
-	if (has_ext(infile_name, ".bmp")) {
+	if (!has_ext(infile_name, ".xml")) {
 		method = Z_DEFLATED; // just deflated
 		level = Z_DEFAULT_COMPRESSION;
 	}
@@ -524,7 +526,8 @@ int add_default_document_to_tns(const char *tnsfile_path, unsigned tiversion) {
 
 int add_infile_to_tns(const char *infile_path, const char *tnsfile_path, unsigned tiversion) {
 	size_t xmlc_buf_size;
-	void *xmlc_buf = read_file_and_xml_compress(infile_path, &xmlc_buf_size);
+	const char *filename = NULL;
+	void *xmlc_buf = read_file_and_xml_compress(infile_path, &xmlc_buf_size, &filename);
 	if (!xmlc_buf)
 		return 1;
 
@@ -541,18 +544,18 @@ add_infile_err:
 		free(header_and_deflated_buf);
 		return 1;
 	}
-	if (!has_ext(infile_path, ".bmp")) { // bmp are not encrypted
+	if (has_ext(filename, ".xml")) { // Only .xml files are encrypted
 		uint8_t *def_buf = header_and_deflated_buf + header_size;
 		long deflated_size = deflate_compressed_xml(def_buf, def_size, xmlc_buf, xmlc_buf_size);
 		free(xmlc_buf);
 		if (doccrypt(def_buf, deflated_size))
 			goto add_infile_err;
 		memcpy(header_and_deflated_buf, tien_crypted_header, header_size);
-		if (add_processed_file_to_tns(gnu_basename(infile_path), header_and_deflated_buf, header_size + deflated_size, tnsfile_path, tiversion))
+		if (add_processed_file_to_tns(filename, header_and_deflated_buf, header_size + deflated_size, tnsfile_path, tiversion))
 			goto add_infile_err;
 	}
 	else { // don't crypt, don't deflate: will be deflated by minizip
-		if (add_processed_file_to_tns(gnu_basename(infile_path), xmlc_buf, xmlc_buf_size, tnsfile_path, tiversion))
+		if (add_processed_file_to_tns(filename, xmlc_buf, xmlc_buf_size, tnsfile_path, tiversion))
 			goto add_infile_err;
 	}
 	free(header_and_deflated_buf);
