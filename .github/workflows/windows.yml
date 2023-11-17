@@ -1,0 +1,32 @@
+name: Build for Windows
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  release:
+    types: [ published ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+    - name: Checkout Git Repo
+      uses: actions/checkout@v3
+
+    - name: Fixup PATH
+      run: |
+        echo "C:/msys64/mingw64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "C:/msys64/usr/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Build
+      run: |
+        mingw32-make -j4 CC=gcc
+
+    - name: Upload zip
+      uses: actions/upload-artifact@v3
+      with:
+          name: luna-win64
+          path: "luna.exe"
+          if-no-files-found: error
