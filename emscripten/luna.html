@@ -5,36 +5,51 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <title>luna-web</title>
-  <script src="FileSaver.js" type="text/javascript"></script>
+  <script type="module">
+    import WebLuna from '/WebLuna.js';
+    window.WebLunaLib = await WebLuna();
+
+    document.getElementById('lunaFileInput').addEventListener("change", function(event)
+    {
+        const file = event.target.files[0];
+        if (!file || !(file.name.endsWith('.lua') || file.name.endsWith('.xml')))
+        {
+            alert('Error: a .lua script or .xml file is needed');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = function(event) {
+            if (event.target.readyState == FileReader.DONE)
+            {
+                WebLunaLib.FS.writeFile(file.name, new Uint8Array(event.target.result), {encoding: 'binary'});
+                const tnsName = file.name.replace(/\.(lua|xml)$/, '.tns');
+                try { WebLunaLib.FS.unlink(tnsName); } catch (e){}
+                if (WebLunaLib.callMain([file.name, tnsName]) !== 0) {
+                    alert('Oops, something went wrong generating the .tns file (see console)');
+                    return;
+                }
+                const tnsFile = WebLunaLib.FS.readFile(tnsName, {encoding: 'binary'});
+                if (tnsFile) {
+                    let a = document.createElement("a");
+                    a.download = tnsName;
+                    a.href = URL.createObjectURL(new Blob([tnsFile], { type: "application/octet-stream" }));
+                    a.dispatchEvent(new MouseEvent("click"));
+                } else {
+                    alert('Oops, something went wrong retrieving the generated .tns file :(');
+                }
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+  </script>
 </head>
 
 <body>
 
 <div>
-    Create a .tns file from a .lua script (or Problem1.xml): <input type="file" accept=".lua, .xml" onChange="fileLoad(event)"/><br>
+    Create a .tns file from a .lua script (or Problem1.xml): <input type="file" accept=".lua,.xml" id="lunaFileInput"/><br>
 </div>
-
-<script type='text/javascript'>
-    Module = { };
-    var loadlunajs = function()
-    {
-        var script = document.createElement('script');
-        script.src = "luna.js";
-        document.body.appendChild(script);
-    };
-
-    if (typeof WebAssembly !== "undefined")
-    {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', 'luna.wasm', true);
-        xhr.responseType = 'arraybuffer';
-        xhr.onload = function () { Module.wasmBinary = xhr.response; };
-        xhr.onloadend = loadlunajs;
-        xhr.send(null);
-    } else {
-        loadlunajs();
-    }
-</script>
 
 </body>
 </html>

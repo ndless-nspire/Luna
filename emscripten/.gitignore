@@ -3,4 +3,4 @@
 *.wast
 *.asm.js
 *.js.mem
-luna.js
+WebLuna.js
