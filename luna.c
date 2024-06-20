@@ -586,16 +586,11 @@ int add_python_xml_to_tns(const char *python_path, const char *tnsfile_path, uns
 	}
 
 	// Filename goes sandwiched between the header and footer
-	size_t py_header_size = sizeof(py_header) - 1;
-	size_t py_footer_size = sizeof(py_footer) - 1;
-	size_t total_size = py_header_size + filename_len + py_footer_size;
-	uint8_t xmlc_buf[(sizeof(py_header) - 1) + 240 + (sizeof(py_footer - 1))];
+	char xmlc_buf[(sizeof(py_header) - 1) + 240 + (sizeof(py_footer - 1))];
+	sprintf(xmlc_buf, "%s%s%s", py_header, filename, py_footer);
 
-	memcpy(xmlc_buf, py_header, py_header_size);
-	memcpy(xmlc_buf + py_header_size, filename, filename_len);
-	memcpy(xmlc_buf + py_header_size + filename_len, py_footer, py_footer_size);
-	int ret = add_compressed_xml_to_tns(tnsfile_path, "Problem1.xml", xmlc_buf, total_size, tiversion);
-	return ret;
+	size_t total_size = (sizeof(py_header) - 1) + filename_len + (sizeof(py_footer) - 1);
+	return add_compressed_xml_to_tns(tnsfile_path, "Problem1.xml", xmlc_buf, total_size, tiversion);
 }
 
 int main(int argc, char *argv[]) {
