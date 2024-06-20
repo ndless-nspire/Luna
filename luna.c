@@ -577,23 +577,24 @@ int add_python_xml_to_tns(const char *python_path, const char *tnsfile_path, uns
 	static const char py_footer[] =
 		"\x0E\x07<py:dirf>-10000000\x0E\x08\x0E\x06<py:mFlags>1024\x0E\x09"
 		"<py:value>10\x0E\x0A\x0E\x05\x0E\x02\x0E\x00";
+
 	const char *filename = gnu_basename(python_path);
+	size_t filename_len = strlen(filename);
+	if (filename_len > 240) {
+		puts("Python script filenames limited to 240 characters");
+		return 1;
+	}
 
 	// Filename goes sandwiched between the header and footer
 	size_t py_header_size = sizeof(py_header) - 1;
-	size_t filename_len = strlen(filename);
 	size_t py_footer_size = sizeof(py_footer) - 1;
 	size_t total_size = py_header_size + filename_len + py_footer_size;
-	uint8_t *xmlc_buf = malloc(total_size);
-	if (!xmlc_buf) {
-		puts("can't malloc xmlc_buf");
-		return 1;
-	}
+	uint8_t xmlc_buf[(sizeof(py_header) - 1) + 240 + (sizeof(py_footer - 1))];
+
 	memcpy(xmlc_buf, py_header, py_header_size);
 	memcpy(xmlc_buf + py_header_size, filename, filename_len);
 	memcpy(xmlc_buf + py_header_size + filename_len, py_footer, py_footer_size);
 	int ret = add_compressed_xml_to_tns(tnsfile_path, "Problem1.xml", xmlc_buf, total_size, tiversion);
-	free(xmlc_buf);
 	return ret;
 }
 
