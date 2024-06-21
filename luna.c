@@ -586,7 +586,7 @@ int add_python_xml_to_tns(const char *python_path, const char *tnsfile_path, uns
 	}
 
 	// Filename goes sandwiched between the header and footer
-	char xmlc_buf[(sizeof(py_header) - 1) + 240 + (sizeof(py_footer - 1))];
+	char xmlc_buf[(sizeof(py_header) - 1) + 240 + (sizeof(py_footer) - 1)];
 	sprintf(xmlc_buf, "%s%s%s", py_header, filename, py_footer);
 
 	size_t total_size = (sizeof(py_header) - 1) + filename_len + (sizeof(py_footer) - 1);
