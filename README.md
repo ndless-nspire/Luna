@@ -1,7 +1,7 @@
 Luna 2.1
 ========
 
-Luna is a portable command-line converter of Lua programs to TNS TI-Nspire documents, compatible with OS 3.0.2 and later.
+Luna is a portable command-line converter of Lua and Python programs to TNS TI-Nspire documents, compatible with OS 3.0.2 and later.
 
 It can also be used to convert any TI-Nspire problems in XML format to TNS documents.
 
@@ -10,6 +10,7 @@ It can also be used to convert any TI-Nspire problems in XML format to TNS docum
 * Lua program conversion:    `luna INFILE.lua OUTFILE.tns`
 * Problem conversion:        `luna Problem1.xml OUTFILE.tns`
 * Multiple files:            `luna Document.xml Problem1.xml [Problem2.xml...] OUTFILE.tns`
+* Python conversion:         `luna INFILE.py OUTFILE.tns`
 
 If the input is `-`, it reads the file from the standard input.  
 Make sure to encode your Lua or Problem file in UTF-8 if it contains special characters. You can also pack arbitrary files like images into the TNS.
