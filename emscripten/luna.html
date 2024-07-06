@@ -12,9 +12,9 @@
     document.getElementById('lunaFileInput').addEventListener("change", function(event)
     {
         const file = event.target.files[0];
-        if (!file || !(file.name.endsWith('.lua') || file.name.endsWith('.xml')))
+        if (!file || !/\.(lua|py|xml)$/.test(file.name))
         {
-            alert('Error: a .lua script or .xml file is needed');
+            alert('Error: a .lua or .py script, or an .xml file, is needed');
             return;
         }
 
@@ -23,7 +23,7 @@
             if (event.target.readyState == FileReader.DONE)
             {
                 WebLunaLib.FS.writeFile(file.name, new Uint8Array(event.target.result), {encoding: 'binary'});
-                const tnsName = file.name.replace(/\.(lua|xml)$/, '.tns');
+                const tnsName = file.name.replace(/\.[^.]+$/, '.tns');
                 try { WebLunaLib.FS.unlink(tnsName); } catch (e){}
                 if (WebLunaLib.callMain([file.name, tnsName]) !== 0) {
                     alert('Oops, something went wrong generating the .tns file (see console)');
@@ -48,7 +48,7 @@
 <body>
 
 <div>
-    Create a .tns file from a .lua script (or Problem1.xml): <input type="file" accept=".lua,.xml" id="lunaFileInput"/><br>
+    Create a .tns file from a .lua/.py script (or Problem1.xml): <input type="file" accept=".lua,.py,.xml" id="lunaFileInput"/><br>
 </div>
 
 </body>
