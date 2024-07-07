@@ -58,15 +58,15 @@ char *utf82unicode(char *in, char *end, unsigned long *c) {
 		return min(end, in + 2);
 	}
 	if ((*in & 0b11110000) == 0b11100000) {
-		*c = (*in & 0b00011111) << 12;
+		*c = (*in & 0b00001111) << 12;
 		if (end > in + 1)
 			*c |= (*(in + 1) & 0b00111111) << 6;
 		if (end > in + 2)
 			*c |= *(in + 2) & 0b00111111;
 		return min(end, in + 3);
 	}
-	if ((*in & 0b111110000) == 0b11110000) {
-		*c = (*in & 0b00011111) << 18;
+	if ((*in & 0b11111000) == 0b11110000) {
+		*c = (*in & 0b00000111) << 18;
 		if (end > in + 1)
 			*c |= (*(in + 1) & 0b00111111) << 12;
 		if (end > in + 2)
