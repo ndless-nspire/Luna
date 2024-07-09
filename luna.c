@@ -121,34 +121,23 @@ void *escape_unicode(char *in_buf, size_t header_size, size_t footer_size, size_
 	return out_buf2;
 }
 
-/* sub-routine of xml_compress() to escape the Lua script string. Returns the new in_buf or NULL */
-void *escape_special_xml_chars(char *in_buf, size_t header_size, size_t in_size, size_t *obuf_size) {
-	char *p;
-	unsigned extend_with = 0;
-	for (p = in_buf + header_size; p < in_buf + header_size + in_size; p++) {
-		if (*p == '&') extend_with += 4; // amp;
-		else if (*p == '<') extend_with += 3; // lt;
-	}
-	if (extend_with) {
-		*obuf_size += extend_with;
-		void *tmp_in_buf;
-		if (!(tmp_in_buf = realloc(in_buf, *obuf_size))) {
-			puts("can't realloc in_buf for special characters");
-			free(in_buf);
-			return NULL;
-		}
-		in_buf = tmp_in_buf;
-		unsigned new_written = 0;
-		for (p = in_buf + header_size; p < in_buf + header_size + in_size + new_written; p++) {
-			if (*p == '&') {
-				memmove(p + 5, p + 1, in_buf + header_size + in_size + new_written - p - 1);
-				memcpy(p, "&amp;", 5);
-				new_written += 4;
-			} else if (*p == '<') {
-				memmove(p + 4, p + 1, in_buf + header_size + in_size + new_written - p - 1);
-				memcpy(p, "&lt;", 4);
-				new_written += 3;
+/* sub-routine of xml_compress() to fix occurrences of CDATA end sequence "]]>" in Lua scripts
+ * by spitting them between two CDATA sections. Returns the new in_buf, or NULL if out of memory. */
+void *fix_cdata_end_seq(char *in_buf, size_t header_size, size_t in_size, size_t *obuf_size) {
+	for (size_t offset = header_size; offset < header_size + in_size - 2; offset++) {
+		if (!memcmp(in_buf + offset, "]]>", 3)) {
+			*obuf_size += 12; // ]]><![CDATA[
+			char *tmp_in_buf;
+			if (!(tmp_in_buf = realloc(in_buf, *obuf_size))) {
+				puts("can't realloc in_buf");
+				free(in_buf);
+				return NULL;
 			}
+			in_buf = tmp_in_buf;
+			memmove(in_buf + offset + 14, in_buf + offset + 2, header_size + in_size - (offset + 2));
+			memcpy(in_buf + offset + 2, "]]><![CDATA[", 12);
+			in_size += 12;
+			offset += 14;
 		}
 	}
 	return in_buf;
@@ -309,8 +298,9 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size, const 
 		"\x3D\x22\x31\x2E\x30\x22\x3E\x3C\x73\x63\x3A\x6D\x46\x6C\x61\x67\x73"
 		"\x3E\x30\x0E\x06\x3C\x73\x63\x3A\x76\x61\x6C\x75\x65\x3E\x2D\x31\x0E"
 		"\x07\x3C\x73\x63\x3A\x73\x63\x72\x69\x70\x74\x20\x76\x65\x72\x73\x69"
-		"\x6F\x6E\x3D\x22\x35\x31\x32\x22\x20\x69\x64\x3D\x22\x30\x22\x3E\x0A";
-	static const char lua_footer[] = "\x0E\x08\x0E\x05\x0E\x02\x0E\x00";
+		"\x6F\x6E\x3D\x22\x35\x31\x32\x22\x20\x69\x64\x3D\x22\x30\x22\x3E"
+		"<![CDATA[";
+	static const char lua_footer[] = "]]>\x0E\x08\x0E\x05\x0E\x02\x0E\x00";
 	static const char xml_header[] =
 		"\x54\x49\x58\x43\x30\x31\x30\x30\x2D\x31\x2E\x30\x3F\x3E";
 
@@ -384,13 +374,12 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size, const 
 		return in_buf;
 	}
 
-	in_buf = escape_unicode(in_buf, header_size, footer_size, in_size, obuf_size);
-	if (!in_buf) return NULL;
-
 	if (infile_is_xml) {
+		in_buf = escape_unicode(in_buf, header_size, footer_size, in_size, obuf_size);
+		if (!in_buf) return NULL;
 		return reformat_xml_doc(in_buf, header_size, in_size, obuf_size);
 	} else {
-		if (!(in_buf = escape_special_xml_chars(in_buf, header_size, in_size, obuf_size)))
+		if (!(in_buf = fix_cdata_end_seq(in_buf, header_size, in_size, obuf_size)))
 			return NULL;
 		in_size = *obuf_size - header_size - footer_size;
 		memcpy(in_buf + header_size + in_size, lua_footer, sizeof(lua_footer) - 1);
