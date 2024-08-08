@@ -3,7 +3,7 @@ CFLAGS  = -O2 -flto -Wall -Wextra -DNOCRYPT -DUSE_FILE32API -Wno-unused-paramete
 LDFLAGS = -flto -lz
 VPATH   = minizip-1.1
 
-PREFIX  = /usr/local/bin
+PREFIX ?= /usr/local/bin
 
 OBJECTS = luna.o zip.o ioapi.o DES.o
 
