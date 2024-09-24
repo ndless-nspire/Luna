@@ -123,21 +123,25 @@ void *escape_unicode(char *in_buf, size_t header_size, size_t footer_size, size_
 
 /* sub-routine of xml_compress() to fix occurrences of CDATA end sequence "]]>" in Lua scripts
  * by spitting them between two CDATA sections. Returns the new in_buf, or NULL if out of memory. */
+static const char cdata_restart[] = "]]><![CDATA[";
 void *fix_cdata_end_seq(char *in_buf, size_t header_size, size_t in_size, size_t *obuf_size) {
 	for (size_t offset = header_size; offset < header_size + in_size - 2; offset++) {
 		if (!memcmp(in_buf + offset, "]]>", 3)) {
-			*obuf_size += 12; // ]]><![CDATA[
-			char *tmp_in_buf;
-			if (!(tmp_in_buf = realloc(in_buf, *obuf_size))) {
+			// Skip "]]"
+			offset += 2;
+			// Insert "]]><![CDATA["
+			*obuf_size += sizeof(cdata_restart) - 1;
+			char *new_in_buf;
+			if (!(new_in_buf = realloc(in_buf, *obuf_size))) {
 				puts("can't realloc in_buf");
 				free(in_buf);
 				return NULL;
 			}
-			in_buf = tmp_in_buf;
-			memmove(in_buf + offset + 14, in_buf + offset + 2, header_size + in_size - (offset + 2));
-			memcpy(in_buf + offset + 2, "]]><![CDATA[", 12);
-			in_size += 12;
-			offset += 14;
+			in_buf = new_in_buf;
+			memmove(in_buf + offset + sizeof(cdata_restart) - 1, in_buf + offset, header_size + in_size - offset);
+			memcpy(in_buf + offset, cdata_restart, sizeof(cdata_restart) - 1);
+			in_size += sizeof(cdata_restart) - 1;
+			offset += sizeof(cdata_restart) - 1;
 		}
 	}
 	return in_buf;
