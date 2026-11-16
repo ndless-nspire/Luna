@@ -92,9 +92,23 @@ void *escape_unicode(char *in_buf, size_t header_size, size_t footer_size, size_
 	p = in_buf + header_size;
 	if (!memcmp(in_buf + header_size, "\xEF\xBB\xBF", 3)) // skip the UTF-8 BOM if any
 		p += 3;
-	for (op = out_buf + header_size; p < in_buf + header_size + in_size;) {
+	char *in_end = in_buf + header_size + in_size;
+	for (op = out_buf + header_size; p < in_end;) {
 		unsigned long uc;
-		p = utf82unicode(p, in_buf + header_size + in_size, &uc);
+		// CDATA content is stored raw (UTF-8), not in the escaped text encoding:
+		// the TIXC grammar copies CDATA verbatim, so escaped characters would end
+		// up as 0x00 bytes etc. in the script
+		if (*p == '<' && in_end - p >= 9 && !memcmp(p, "<![CDATA[", 9)) {
+			char *cdata_end = p + 9;
+			while (cdata_end + 3 <= in_end && memcmp(cdata_end, "]]>", 3))
+				cdata_end++;
+			cdata_end = (cdata_end + 3 <= in_end) ? cdata_end + 3 : in_end;
+			memcpy(op, p, cdata_end - p);
+			op += cdata_end - p;
+			p = cdata_end;
+			continue;
+		}
+		p = utf82unicode(p, in_end, &uc);
 		if (uc < 0x80) {
 			*op++ = (char)uc;
 		} else if (uc < 0x800) {
@@ -234,16 +248,13 @@ invalid_problem:
 				const char *cdata_first = &xml_start[read_offset - 2];
 				read_offset += strlen("[CDATA[");
 
+				// The section ends at the first "]]>" (it can't occur inside CDATA)
 				const char *cdata_last = NULL;
-				for(;;) {
-					const char *maybe_last = memchr(xml_start + read_offset, '>', size_to_read - read_offset);
-					if(!maybe_last)
+				for (size_t i = read_offset; i + 3 <= size_to_read; i++) {
+					if (!memcmp(xml_start + i, "]]>", 3)) {
+						cdata_last = xml_start + i + 2; // the '>'
 						break;
-
-					read_offset = maybe_last - xml_start + 1;
-
-					if(!strncmp("]]>", maybe_last - 2, strlen("]]>")))
-						cdata_last = maybe_last;
+					}
 				}
 
 				if(!cdata_last)
@@ -260,7 +271,13 @@ invalid_problem:
 					puts("input problem/document XML too deep");
 					goto reformat_xml_quit;
 				}
-				tagid_stack[tagid_head_index++] = last_tagid++;
+				// A self-closing tag (<a/>) still takes a tag id, since the name is
+				// added to the tag dictionary, but is never closed: don't push it
+				const char *tag_end = memchr(&xml_start[read_offset], '>', size_to_read - read_offset);
+				if (tag_end && tag_end[-1] == '/')
+					last_tagid++;
+				else
+					tagid_stack[tagid_head_index++] = last_tagid++;
 				out_ptr[size_written++] = xml_start[read_offset];
 			}
 		} else {
@@ -381,7 +398,9 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size, const 
 	if (infile_is_xml) {
 		in_buf = escape_unicode(in_buf, header_size, footer_size, in_size, obuf_size);
 		if (!in_buf) return NULL;
-		return reformat_xml_doc(in_buf, header_size, in_size, obuf_size);
+		// use the size after escaping: it differs from in_size, e.g. when a
+		// UTF-8 BOM was dropped (reading in_size bytes then overran the buffer)
+		return reformat_xml_doc(in_buf, header_size, *obuf_size - header_size - footer_size, obuf_size);
 	} else {
 		if (!(in_buf = fix_cdata_end_seq(in_buf, header_size, in_size, obuf_size)))
 			return NULL;
