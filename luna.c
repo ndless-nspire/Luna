@@ -92,9 +92,23 @@ void *escape_unicode(char *in_buf, size_t header_size, size_t footer_size, size_
 	p = in_buf + header_size;
 	if (!memcmp(in_buf + header_size, "\xEF\xBB\xBF", 3)) // skip the UTF-8 BOM if any
 		p += 3;
-	for (op = out_buf + header_size; p < in_buf + header_size + in_size;) {
+	char *in_end = in_buf + header_size + in_size;
+	for (op = out_buf + header_size; p < in_end;) {
 		unsigned long uc;
-		p = utf82unicode(p, in_buf + header_size + in_size, &uc);
+		// CDATA content is stored raw (UTF-8), not in the escaped text encoding:
+		// the TIXC grammar copies CDATA verbatim, so escaped characters would end
+		// up as 0x00 bytes etc. in the script
+		if (*p == '<' && in_end - p >= 9 && !memcmp(p, "<![CDATA[", 9)) {
+			char *cdata_end = p + 9;
+			while (cdata_end + 3 <= in_end && memcmp(cdata_end, "]]>", 3))
+				cdata_end++;
+			cdata_end = (cdata_end + 3 <= in_end) ? cdata_end + 3 : in_end;
+			memcpy(op, p, cdata_end - p);
+			op += cdata_end - p;
+			p = cdata_end;
+			continue;
+		}
+		p = utf82unicode(p, in_end, &uc);
 		if (uc < 0x80) {
 			*op++ = (char)uc;
 		} else if (uc < 0x800) {
@@ -147,6 +161,49 @@ void *fix_cdata_end_seq(char *in_buf, size_t header_size, size_t in_size, size_t
 	return in_buf;
 }
 
+/* Length of the unit starting with byte b in escape_unicode()'s output.
+ * Escaped characters take 2-4 bytes, and their later bytes can look like
+ * '<', '>', '"' or '/' (e.g. U+013E becomes 01 3E), so scanners must step
+ * over them whole. */
+static size_t escaped_unit_len(unsigned char b) {
+	if (b <= 0x07) return 2; // U+0080..U+07FF: high byte 0x00-0x07, low byte
+	if (b == 0x80) return 3; // U+0800..U+FFFF: 0x80, high byte, low byte
+	if (b == 0x08) return 4; // above U+FFFF: 0x08 + 3 bytes
+	return 1;
+}
+
+/* Finds the '>' that ends the tag starting at s[pos] (a '<'): outside quoted
+ * attribute values, stepping over escaped characters. Returns its offset, or
+ * size if there is none. If self_closing isn't NULL, sets it when the tag
+ * ends with "/>". */
+static size_t find_tag_end(const char *s, size_t pos, size_t size, int *self_closing) {
+	char quote = 0;
+	int last_was_slash = 0;
+	size_t i = pos + 1;
+	while (i < size) {
+		unsigned char c = (unsigned char)s[i];
+		size_t unit = escaped_unit_len(c);
+		if (unit > 1) {
+			last_was_slash = 0;
+			i += unit;
+			continue;
+		}
+		if (quote) {
+			if (c == quote)
+				quote = 0;
+		} else if (c == '"' || c == '\'') {
+			quote = c;
+		} else if (c == '>') {
+			if (self_closing)
+				*self_closing = last_was_slash;
+			return i;
+		}
+		last_was_slash = !quote && c == '/';
+		i++;
+	}
+	return size;
+}
+
 /* sub-routine of read_file_and_xml_compress() in case of an XML problem as input. Returns the new in_buf or NULL */
 void *reformat_xml_doc(char *in_buf, size_t header_size, size_t in_size, size_t *obuf_size) {
 	char *out_buf = malloc(header_size + in_size);
@@ -179,6 +236,16 @@ reformat_xml_quit:
 	char *out_ptr = out_buf + header_size;
 	// very weak XML parsing: all < must be escaped
 	while(read_offset <= size_to_read - 1) {
+		// An escaped character is copied whole: its later bytes can look like '<'
+		size_t unit = escaped_unit_len((unsigned char)xml_start[read_offset]);
+		if (unit > 1) {
+			if (read_offset + unit > size_to_read)
+				goto invalid_problem;
+			memcpy(out_ptr + size_written, &xml_start[read_offset], unit);
+			size_written += unit;
+			read_offset += unit;
+			continue;
+		}
 		if (xml_start[read_offset] == '<') {
 			if (read_offset + 1 >= size_to_read) {
 invalid_problem:
@@ -195,15 +262,15 @@ invalid_problem:
 					out_ptr[size_written++] = 0x0E;
 					out_ptr[size_written++] = index;
 					// skip the closing tag
-					while(++read_offset <= size_to_read - 1 && xml_start[read_offset] != '>')
-						;
+					read_offset = find_tag_end(xml_start, read_offset - 1, size_to_read, NULL);
 				}
 				else {
 					// Too big for the tag store, copy in full
 					const char *tag_first = &xml_start[read_offset - 1];
-					const char *tag_last = memchr(&xml_start[read_offset], '>', size_to_read - read_offset);
-					if(!tag_last)
+					size_t tag_end = find_tag_end(xml_start, read_offset - 1, size_to_read, NULL);
+					if (tag_end >= size_to_read)
 						goto invalid_problem;
+					const char *tag_last = &xml_start[tag_end];
 
 					memcpy(out_ptr + size_written, tag_first, tag_last - tag_first + 1);
 					size_written += tag_last - tag_first + 1;
@@ -234,16 +301,13 @@ invalid_problem:
 				const char *cdata_first = &xml_start[read_offset - 2];
 				read_offset += strlen("[CDATA[");
 
+				// The section ends at the first "]]>" (it can't occur inside CDATA)
 				const char *cdata_last = NULL;
-				for(;;) {
-					const char *maybe_last = memchr(xml_start + read_offset, '>', size_to_read - read_offset);
-					if(!maybe_last)
+				for (size_t i = read_offset; i + 3 <= size_to_read; i++) {
+					if (!memcmp(xml_start + i, "]]>", 3)) {
+						cdata_last = xml_start + i + 2; // the '>'
 						break;
-
-					read_offset = maybe_last - xml_start + 1;
-
-					if(!strncmp("]]>", maybe_last - 2, strlen("]]>")))
-						cdata_last = maybe_last;
+					}
 				}
 
 				if(!cdata_last)
@@ -260,7 +324,15 @@ invalid_problem:
 					puts("input problem/document XML too deep");
 					goto reformat_xml_quit;
 				}
-				tagid_stack[tagid_head_index++] = last_tagid++;
+				// A self-closing tag (<a/>) still takes a tag id, since the name is
+				// added to the tag dictionary, but is never closed: don't push it.
+				// The tag's end is found outside quoted values (pbname="a/>b").
+				int self_closing = 0;
+				find_tag_end(xml_start, read_offset, size_to_read, &self_closing);
+				if (self_closing)
+					last_tagid++;
+				else
+					tagid_stack[tagid_head_index++] = last_tagid++;
 				out_ptr[size_written++] = xml_start[read_offset];
 			}
 		} else {
@@ -381,7 +453,9 @@ void *read_file_and_xml_compress(const char *inf_path, size_t *obuf_size, const 
 	if (infile_is_xml) {
 		in_buf = escape_unicode(in_buf, header_size, footer_size, in_size, obuf_size);
 		if (!in_buf) return NULL;
-		return reformat_xml_doc(in_buf, header_size, in_size, obuf_size);
+		// use the size after escaping: it differs from in_size, e.g. when a
+		// UTF-8 BOM was dropped (reading in_size bytes then overran the buffer)
+		return reformat_xml_doc(in_buf, header_size, *obuf_size - header_size - footer_size, obuf_size);
 	} else {
 		if (!(in_buf = fix_cdata_end_seq(in_buf, header_size, in_size, obuf_size)))
 			return NULL;
